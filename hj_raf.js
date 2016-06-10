@@ -114,7 +114,7 @@ function hj_draw()
   
   for (var i=0 ; i<hj_objects.length ; i++)
   {
-    hj_objects[i].draw();
+    hj_objects[i].draw(g);
   }
   
   g.restore();

@@ -6,7 +6,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   {
     constructor(x, y)
     {
-      if (isNaN(x))
+      if (x !== undefined && isNaN(x))
       {
         this.set(x);
       }
@@ -75,10 +75,181 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     }
   }
   
+  class ProbePoint
+  {
+    constructor(position)
+    {
+      this.position = position;
+      
+      this.weight = 0;
+      this.blocked = false;
+      
+      this.sum = 0;
+      this.parent = null;
+      
+      this.parents = [];
+    }
+    
+    addParent(probe)
+    {
+      this.parents.push(probe);
+    }
+    
+    reset()
+    {
+      this.weight = 0;
+      this.blocked = false;
+      
+      this.sum = 0;
+      this.parent = null;
+    }
+    
+    trace()
+    {
+      if (!this.blocked)
+      {
+        var bestParent = null;
+        var score = -1;
+        
+        this.parents.forEach((parent) =>
+        {
+          if (parent.parent && parent.sum > score)
+          {
+            bestParent = parent;
+            score = parent.sum;
+          }
+        });
+        
+        this.parent = bestParent;
+        if (bestParent)
+        {
+          this.sum += this.weight;
+        }
+        else
+        {
+          this.blocked = true;
+        }
+      }
+    }
+  }
+  
+  class Probe
+  {
+    constructor(layers, radius, density)
+    {
+      this.layerCount = layers;
+      this.radius = radius;
+      
+      this.layers = [];
+      
+      this.center = new v2();
+      this.heading = 0;
+      
+      for (var i=0 ; i<layers ; i++)
+      {
+        var layer = [];
+        this.layers.push(layer);
+        
+        var angle = 2*Math.PI / density;
+        var offset = 0;//(i%2) ? angle/2 : 0;
+        
+        var lradius = radius * (i+1);
+        
+        for (var j=0 ; j<density ; j++)
+        {
+          var point = new ProbePoint(
+            new v2(
+              Math.cos(offset + j*angle)*lradius,
+              Math.sin(offset + j*angle)*lradius
+            )
+          );
+          layer.push(point);
+          
+          if (i>0)
+          {
+            point.addParent(this.layers[i-1][j]);
+            point.addParent(this.layers[i-1][(j+density-1) % density]);
+            point.addParent(this.layers[i-1][(j+1) % density]);
+          }
+        }
+      }
+    }
+    
+    reset()
+    {
+      this.layers.forEach((layer, i) =>
+      {
+        layer.forEach((point, j) =>
+        {
+          point.reset();
+          
+          if (i == 0)
+          {
+            if ((j + layer.length / 6) % layer.length < layer.length / 3)
+            {
+              point.parent = point;
+            }
+          }
+        });
+      });
+    }
+    
+    trace()
+    {
+      this.layers.forEach((layer, i) =>
+      {
+        if (i > 0)
+        {
+          layer.forEach((point) =>
+          {
+            point.trace();
+          });
+        }
+      });
+    }
+    
+    draw(g)
+    {
+      g.save();
+      g.translate(this.center.x, this.center.y);
+      g.rotate(this.heading);
+      
+      g.strokeStyle = "red";
+      g.beginPath();
+      g.moveTo(0, 0);
+      g.lineTo(this.radius * this.layers.length, 0);
+      g.stroke();
+      
+      this.layers.forEach((layer) =>
+      {
+        layer.forEach((point) =>
+        {
+          g.fillStyle = point.blocked ? "red" : "green";
+          g.fillRect(point.position.x-1, point.position.y-1, 3, 3);
+          
+          if (point.parent)
+          {
+            g.beginPath();
+            g.moveTo(point.parent.position.x, point.parent.position.y);
+            g.lineTo(point.position.x, point.position.y);
+            g.stroke();
+          }
+        });
+      });
+      
+      g.restore();
+    }
+  }
+  
   var __state =
   {
-    probes: [],
+    probe: new Probe(7, 40, 16),
+    pos: new v2(),
+    speed: 0,
   };
+  
+  hj_objects.length = 0;
+  hj_objects.push(__state.probe);
   
   window.xxx_iv_=setInterval(function()
   {
@@ -120,10 +291,11 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         return out;
       });
       
-      out.speed = snake.sp;
+      out.speed = snake.sp * 32;
+      out.angle = snake.ang;
       out.heading = new v2(
-        Math.cos(snake.ang),
-        Math.sin(snake.ang)
+        Math.cos(out.angle),
+        Math.sin(out.angle)
       );
       
       objects.set(out.id, out);
@@ -136,6 +308,21 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     {
       return;
     }
+    
+    __state.probe.center.set(me.head);
+    __state.probe.heading = me.angle;
+    
+    __state.probe.reset();
+    __state.probe.trace();
+    
+    var delta = me.head.dup().mad(__state.pos, -1);
+    if (delta.length() < 100)
+    {
+      __state.speed = __state.speed * 0.95 + delta.length() * 0.05 / 0.1;
+    }
+    __state.pos = me.head;
+    
+    document.title = me.speed + " " + __state.speed;
     
     var best = foods
     .filter((food)=>
