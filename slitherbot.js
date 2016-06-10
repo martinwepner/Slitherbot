@@ -468,7 +468,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     {
       var parts = [];
       
-      var region = new v2(50, 50);
+      var region = new v2(80, 80);
       
       var box = null;
       this.tail.forEach((point, i) =>
