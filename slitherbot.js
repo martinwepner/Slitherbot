@@ -104,6 +104,11 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       this.parent = null;
     }
     
+    addFood(food)
+    {
+      this.weight += food.size - 2;
+    }
+    
     trace()
     {
       if (!this.blocked)
@@ -123,7 +128,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         this.parent = bestParent;
         if (bestParent)
         {
-          this.sum += this.weight;
+          this.sum = score + this.weight;
         }
         else
         {
@@ -135,7 +140,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   
   class Probe
   {
-    constructor(layers, radius, density)
+    constructor(layers, radius, placingDensity)
     {
       this.layerCount = layers;
       this.radius = radius;
@@ -143,17 +148,18 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       this.layers = [];
       
       this.center = new v2();
-      this.heading = 0;
+      this.angle = 0;
+      this.heading = new v2(1, 0);
       
       for (var i=0 ; i<layers ; i++)
       {
         var layer = [];
-        this.layers.push(layer);
+        
+        var lradius = radius * (i+1);
+        var density = Math.ceil((i+1) * placingDensity);
         
         var angle = 2*Math.PI / density;
         var offset = 0;//(i%2) ? angle/2 : 0;
-        
-        var lradius = radius * (i+1);
         
         for (var j=0 ; j<density ; j++)
         {
@@ -167,11 +173,19 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
           
           if (i>0)
           {
-            point.addParent(this.layers[i-1][j]);
-            point.addParent(this.layers[i-1][(j+density-1) % density]);
-            point.addParent(this.layers[i-1][(j+1) % density]);
+            var [layerid, pointid] = this.getNearestPoint(point.position.dup().mul(i / (i+1)));
+            
+            var parentLayer = this.layers[layerid];
+            if (parentLayer)
+            {
+              point.addParent(parentLayer[pointid]);
+              point.addParent(parentLayer[(pointid+1) % parentLayer.length]);
+              point.addParent(parentLayer[(pointid+parentLayer.length-1) % parentLayer.length]);
+            }
           }
         }
+        
+        this.layers.push(layer);
       }
     }
     
@@ -194,6 +208,39 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       });
     }
     
+    getNearestPoint(point)
+    {
+      var offset = point.dup().mad(this.center, -1);
+      var distance = offset.length();
+      
+      var layerid = Math.floor(distance / this.radius - 0.5);
+      var layer = this.layers[layerid];
+      
+      if (layer)
+      {
+        var angle = -Math.atan2(offset.cross(this.heading), offset.dot(this.heading));
+        
+        var pointid = (layer.length + (Math.floor(angle / (Math.PI*2) * layer.length + 0.5) % layer.length)) % layer.length;
+        
+        return [layerid, pointid];
+      }
+      
+      return [-1, -1];
+    }
+    
+    addFood(food)
+    {
+      var [layerid, pointid] = this.getNearestPoint(food);
+      
+      var layer = this.layers[layerid];
+      if (layer)
+      {
+        var point = layer[pointid];
+        
+        point.addFood(food);
+      }
+    }
+    
     trace()
     {
       this.layers.forEach((layer, i) =>
@@ -212,7 +259,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     {
       g.save();
       g.translate(this.center.x, this.center.y);
-      g.rotate(this.heading);
+      g.rotate(this.angle);
       
       g.strokeStyle = "red";
       g.beginPath();
@@ -224,8 +271,18 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       {
         layer.forEach((point) =>
         {
-          g.fillStyle = point.blocked ? "red" : "green";
-          g.fillRect(point.position.x-1, point.position.y-1, 3, 3);
+          g.strokeStyle = point.blocked ? "red" : "green";
+          
+          var size = 1 + point.weight;
+          g.strokeRect(point.position.x-size, point.position.y-size, size*2+1, size*2+1);
+          
+          //g.beginPath();
+          //point.parents.forEach((parent)=>
+          //{
+          //  g.moveTo(parent.position.x, parent.position.y);
+          //  g.lineTo(point.position.x, point.position.y);
+          //});
+          //g.stroke();
           
           if (point.parent)
           {
@@ -233,6 +290,12 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
             g.moveTo(point.parent.position.x, point.parent.position.y);
             g.lineTo(point.position.x, point.position.y);
             g.stroke();
+            
+            if (point.sum > point.weight)
+            {
+              var size = 1 + point.sum;
+              g.strokeRect(point.position.x-size, point.position.y-size, size*2+1, size*2+1);
+            }
           }
         });
       });
@@ -243,7 +306,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   
   var __state =
   {
-    probe: new Probe(7, 40, 16),
+    probe: new Probe(7, 40, 9),
     pos: new v2(),
     speed: 0,
   };
@@ -310,9 +373,14 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     }
     
     __state.probe.center.set(me.head);
-    __state.probe.heading = me.angle;
+    __state.probe.angle = me.angle;
+    __state.probe.heading = me.heading;
     
     __state.probe.reset();
+    foods.forEach((food) =>
+    {
+      __state.probe.addFood(food);
+    });
     __state.probe.trace();
     
     var delta = me.head.dup().mad(__state.pos, -1);
