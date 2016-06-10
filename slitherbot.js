@@ -63,6 +63,20 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       return this.mul(1/this.length());
     }
     
+    min(v)
+    {
+      this.x = Math.min(this.x, v.x);
+      this.y = Math.min(this.y, v.y);
+      return this;
+    }
+    
+    max(v)
+    {
+      this.x = Math.max(this.x, v.x);
+      this.y = Math.max(this.y, v.y);
+      return this;
+    }
+    
     *iter()
     {
       yield this.x;
@@ -74,20 +88,16 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       return "<" + this.x + " " + this.y + ">";
     }
   }
+  v2.zero = new v2();
   
   class ProbePoint
   {
     constructor(position)
     {
       this.position = position;
-      
-      this.weight = 0;
-      this.blocked = false;
-      
-      this.sum = 0;
-      this.parent = null;
-      
       this.parents = [];
+      
+      this.reset();
     }
     
     addParent(probe)
@@ -136,11 +146,19 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         }
       }
     }
+    
+    traceBack()
+    {
+      if (this.parent && !this.blocked)
+      {
+        this.parent.sum = Math.max(this.parent.sum, this.sum);
+      }
+    }
   }
   
   class Probe
   {
-    constructor(layers, radius, placingDensity)
+    constructor(layers, radius, placingDensity, startDensity)
     {
       this.layerCount = layers;
       this.radius = radius;
@@ -151,12 +169,13 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       this.angle = 0;
       this.heading = new v2(1, 0);
       
+      var prevradius = 0;
       for (var i=0 ; i<layers ; i++)
       {
         var layer = [];
         
         var lradius = radius * (i+1);
-        var density = Math.ceil((i+1) * placingDensity);
+        var density = Math.ceil((i+1+startDensity) * placingDensity);
         
         var angle = 2*Math.PI / density;
         var offset = 0;//(i%2) ? angle/2 : 0;
@@ -173,7 +192,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
           
           if (i>0)
           {
-            var [layerid, pointid] = this.getNearestPoint(point.position.dup().mul(i / (i+1)));
+            var [layerid, pointid] = this.getNearestPoint(point.position.dup().mul(prevradius / lradius));
             
             var parentLayer = this.layers[layerid];
             if (parentLayer)
@@ -181,12 +200,28 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
               point.addParent(parentLayer[pointid]);
               point.addParent(parentLayer[(pointid+1) % parentLayer.length]);
               point.addParent(parentLayer[(pointid+parentLayer.length-1) % parentLayer.length]);
+              point.addParent(parentLayer[(pointid+parentLayer.length-2) % parentLayer.length]);
+              point.addParent(parentLayer[(pointid+2) % parentLayer.length]);
             }
           }
         }
         
+        prevradius = lradius;
         this.layers.push(layer);
       }
+    }
+    
+    get right()
+    {
+      return new v2(-this.heading.y, this.heading.x);
+    }
+    
+    getGlobalPosition(position)
+    {
+      return this.right
+        .mul(position.y)
+        .mad(this.heading, position.x)
+        .mad(this.center, 1);
     }
     
     reset()
@@ -199,7 +234,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
           
           if (i == 0)
           {
-            if ((j + layer.length / 6) % layer.length < layer.length / 3)
+            if ((j + layer.length / 4) % layer.length < layer.length / 2)
             {
               point.parent = point;
             }
@@ -255,9 +290,43 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       });
     }
     
+    traceBack()
+    {
+      for (var i=this.layers.length-1 ; i>0 ; i--)
+      {
+        var layer = this.layers[i];
+        
+        if (i > 0)
+        {
+          layer.forEach((point) =>
+          {
+            point.traceBack();
+          });
+        }
+      }
+      
+      var self = this;
+      return this.layers[i]
+        .slice()
+        .sort((a,b) => b.sum-a.sum)
+        .map((point) =>
+        {
+          return self.getGlobalPosition(point.position);
+        });
+    }
+    
+    *iter()
+    {
+      for (var layer of this.layers)
+      {
+        yield* layer;
+      }
+    }
+    
     draw(g)
     {
       g.save();
+      
       g.translate(this.center.x, this.center.y);
       g.rotate(this.angle);
       
@@ -304,15 +373,156 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     }
   }
   
+  class BoundingBox
+  {
+    constructor()
+    {
+      this.min = new v2(Infinity, Infinity);
+      this.max = new v2(-Infinity, -Infinity);
+      this.children = [];
+    }
+    
+    addPoint(point)
+    {
+      this.min.min(point);
+      this.max.max(point);
+    }
+    
+    addBoundingBox(box)
+    {
+      this.min.min(box.min);
+      this.max.max(box.max);
+      
+      this.children.push(box);
+    }
+    
+    contains(point)
+    {
+      if (this.min.x<point.x && this.min.y<point.y && this.max.x>point.x && this.max.y>point.y)
+      {
+        if (!this.children.length)
+        {
+          return true;
+        }
+        else
+        {
+          for (var child of this.children)
+          {
+            if (child.contains(point))
+            {
+              return true;
+            }
+          }
+        }
+      }
+      
+      return false;
+    }
+    
+    get size()
+    {
+      return this.max.dup().mad(this.min, -1).max(v2.zero);
+    }
+    
+    draw(g)
+    {
+      g.strokeRect(this.min.x, this.min.y, this.max.x-this.min.x, this.max.y-this.min.y);
+      
+      this.children.forEach((child) =>
+      {
+        child.draw(g);
+      });
+    }
+  }
+  
+  class Snake
+  {
+    constructor(snake)
+    {
+      this.id = snake.id;
+      this.head = new v2(snake.xx, snake.yy);
+      this.tail = snake.pts.map((point, i, a)=>
+      {
+        var out = new v2(point.xx, point.yy);
+        
+        var last = a[i-1] || point;
+        var next = a[i+1] || point;
+        
+        out.tangent = new v2(last.xx - next.xx, last.yy - next.yy).unit();
+        
+        return out;
+      });
+      
+      this.speed = snake.sp * 32;
+      this.angle = snake.ang;
+      this.heading = new v2(
+        Math.cos(this.angle),
+        Math.sin(this.angle)
+      );
+      
+      this.bounds = new BoundingBox();
+      this.createBounds();
+    }
+    
+    createBounds()
+    {
+      var parts = [];
+      
+      var region = new v2(50, 50);
+      
+      var box = null;
+      this.tail.forEach((point, i) =>
+      {
+        if ((i%5) == 0)
+        {
+          box = new BoundingBox();
+          parts.push(box);
+        }
+        
+        point = point.dup();
+        
+        box.addPoint(point.mad(region, -1));
+        box.addPoint(point.mad(region, 2));
+      });
+      
+      while (parts.length > 1)
+      {
+        var box = new BoundingBox();
+        box.addBoundingBox(parts.shift());
+        box.addBoundingBox(parts.shift());
+        
+        parts.push(box);
+      }
+      
+      if (parts[0])
+      {
+        this.bounds = parts[0];
+      }
+    }
+  }
+  
   var __state =
   {
-    probe: new Probe(7, 40, 9),
+    //probe: new Probe(7, 50, 4, 6),
+    probe: new Probe(11, 65, 6, 8),
+    snakes: [],
     pos: new v2(),
     speed: 0,
   };
+  window.__state = __state;
   
   hj_objects.length = 0;
   hj_objects.push(__state.probe);
+  hj_objects.push({
+    draw: function(g)
+    {
+      g.strokeStyle="#f0f";
+      __state.snakes.forEach((snake) =>
+      {
+        snake.bounds.draw(g);
+      });
+    },
+  });
   
   window.xxx_iv_=setInterval(function()
   {
@@ -338,33 +548,14 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     .filter((snake)=>snake)
     .map((snake)=>
     {
-      var out = {};
-      
-      out.id = snake.id;
-      out.head = new v2(snake.xx, snake.yy);
-      out.tail = snake.pts.map((point, i, a)=>
-      {
-        var out = new v2(point.xx, point.yy);
-        
-        var last = a[i-1] || point;
-        var next = a[i+1] || point;
-        
-        out.tangent = new v2(last.xx - next.xx, last.yy - next.yy).unit();
-        
-        return out;
-      });
-      
-      out.speed = snake.sp * 32;
-      out.angle = snake.ang;
-      out.heading = new v2(
-        Math.cos(out.angle),
-        Math.sin(out.angle)
-      );
+      var out = new Snake(snake);
       
       objects.set(out.id, out);
       
       return out;
     });
+    
+    __state.snakes = snakes;
     
     var me = objects.get(snake.id);
     if (!me)
@@ -377,11 +568,33 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     __state.probe.heading = me.heading;
     
     __state.probe.reset();
+    for (var point of __state.probe.iter())
+    {
+      var position = __state.probe.getGlobalPosition(point.position);
+      
+      for (var _snake of snakes)
+      {
+        if (_snake != me && _snake.bounds.contains(position))
+        {
+          point.blocked = true;
+          break;
+        }
+      }
+    }
     foods.forEach((food) =>
     {
       __state.probe.addFood(food);
     });
     __state.probe.trace();
+    var best = __state.probe.traceBack();
+    
+    if (best[0])
+    {
+      var offset = best[0].mad(me.head, -1).mul(10);
+      
+      xm = offset.x;
+      ym = offset.y;
+    }
     
     var delta = me.head.dup().mad(__state.pos, -1);
     if (delta.length() < 100)
@@ -390,8 +603,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     }
     __state.pos = me.head;
     
-    document.title = me.speed + " " + __state.speed;
-    
+    /*
     var best = foods
     .filter((food)=>
     {
@@ -416,5 +628,6 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       xm = best[0].offset.x;
       ym = best[0].offset.y;
     }
+    */
   }, 100);
 })();
