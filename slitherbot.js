@@ -122,6 +122,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       
       this.sum = 0;
       this.parent = null;
+      this.bestNode = null;
     }
     
     addFood(food)
@@ -161,7 +162,11 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     {
       if (this.parent && !this.blocked)
       {
-        this.parent.sum = Math.max(this.parent.sum, this.sum);
+        if(this.sum > this.parent.sum)
+        {
+          this.parent.sum = this.sum;
+          this.parent.bestNode = this.bestNode || this;
+        }
       }
     }
   }
@@ -321,11 +326,16 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       }
       
       var self = this;
-      return this.layers[i]
+      self.bestNode = null;
+      return this.layers[0]
         .slice()
         .sort((a,b) => b.sum-a.sum)
         .map((point) =>
         {
+          if(!self.bestNode)
+          {
+            self.bestNode = point.bestNode;
+          }
           return self.getGlobalPosition(point.position);
         });
     }
@@ -350,12 +360,15 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       g.moveTo(0, 0);
       g.lineTo(this.radius * this.layers.length, 0);
       g.stroke();
+
+      var best = this.bestNode || 1;
       
       this.layers.forEach((layer) =>
       {
         layer.forEach((point) =>
         {
-          g.strokeStyle = point.blocked ? "red" : "green";
+
+          g.strokeStyle = point.blocked ? "red" : (point.bestNode == best ? "orange" : "green");
           
           var size = 1 + point.weight;
           g.strokeRect(point.position.x-size, point.position.y-size, size*2+1, size*2+1);
@@ -512,7 +525,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       var head = this.head.dup();
       var heading = this.heading.dup();
       var right = heading.dup().right();
-      var front = head.dup().mad(heading.dup(), 200 + (this.racing ? 50 : 0));
+      var front = head.dup().mad(heading.dup(), 200 + (this.racing ? 100 : 0));
 
       box.addPoint(head.dup().mad(right, 80));
       box.addPoint(head.dup().mad(right, -80));
@@ -542,6 +555,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     snakes: [],
     pos: new v2(),
     speed: 0,
+    racing: false,
   };
   window.__state = __state;
   
@@ -570,7 +584,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   window.xxx_iv_=setInterval(function()
   {
     if (!snake) return;
-    
+
     var objects = new Map();
     
     var foods = window.foods
@@ -605,17 +619,19 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     {
       return;
     }
-
-    window.snake.wmd = snakes.reduce((out, other)=>
+    if(__state.racing)
     {
-      if(other == me || out)
-        return out;
+      window.snake.wmd = snakes.reduce((out, other)=>
+      {
+        if(other == me || out)
+          return out;
 
-      if(me.head.dup().mad(other.head, -1).length() < 200 && other.racing)
-        return true;
+        if(me.head.dup().mad(other.head, -1).length() < 250 && other.racing)
+          return true;
 
-      return false;
-    }, false);
+        return false;
+      }, false);
+    }
     
     __state.probe.center.set(me.head);
     __state.probe.angle = me.angle;
@@ -641,7 +657,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     });
     __state.probe.trace();
     var best = __state.probe.traceBack();
-    
+
     if (best[0])
     {
       var offset = best[0].mad(me.head, -1).mul(10);
