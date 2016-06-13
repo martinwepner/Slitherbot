@@ -470,6 +470,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         Math.sin(this.angle)
       );
       
+      this.racing = snake.tsp > snake.fsp;
       this.bounds = new BoundingBox();
       this.createBounds();
     }
@@ -580,22 +581,22 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     
     __state.snakes = snakes;
     
-    var me = objects.get(snake.id);
+    var me = objects.get(window.snake.id);
     if (!me)
     {
       return;
     }
 
-    snakes.reduce((out, other)=>
+    window.snake.wmd = snakes.reduce((out, other)=>
     {
-      if(other == snake)
+      if(other == me || out)
         return out;
 
-      if(me.head.dup().mad(other.head, -1).length() < 80 && other)
+      if(me.head.dup().mad(other.head, -1).length() < 150 && other.racing)
+        return true;
 
-
+      return false;
     }, false);
-    var distToOtherHead = me.head.dup().mad()
     
     __state.probe.center.set(me.head);
     __state.probe.angle = me.angle;
@@ -663,5 +664,5 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       ym = best[0].offset.y;
     }
     */
-  }, 100);
+  }, 25);
 })();
