@@ -76,6 +76,16 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       this.y = Math.max(this.y, v.y);
       return this;
     }
+
+    right(v)
+    {
+      var x = this.x;
+      var y = this.y;
+
+      this.x = y;
+      this.y = -x;
+      return this;
+    }
     
     *iter()
     {
@@ -465,6 +475,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         Math.sin(this.angle)
       );
       
+      this.racing = snake.tsp > snake.fsp;
       this.bounds = new BoundingBox();
       this.createBounds();
     }
@@ -489,6 +500,19 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         box.addPoint(point.mad(region, -1));
         box.addPoint(point.mad(region, 2));
       });
+
+      var box = new BoundingBox();
+      parts.push(box);
+
+      var head = this.head.dup();
+      var heading = this.heading.dup();
+      var right = heading.dup().right();
+      var front = head.dup().mad(heading.dup(), 80 + this.speed);
+
+      box.addPoint(head.dup().mad(right, 80));
+      box.addPoint(head.dup().mad(right, -80));
+      box.addPoint(front.dup().mad(right, 80));
+      box.addPoint(front.dup().mad(right, -80));
       
       while (parts.length > 1)
       {
@@ -516,7 +540,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   };
   window.__state = __state;
   
-  hj_objects.length = 0;
+  /*hj_objects.length = 0;
   hj_objects.push(__state.probe);
   hj_objects.push({
     draw: function(g)
@@ -527,7 +551,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         snake.bounds.draw(g);
       });
     },
-  });
+  });*/
   
   window.xxx_iv_=setInterval(function()
   {
@@ -562,11 +586,22 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     
     __state.snakes = snakes;
     
-    var me = objects.get(snake.id);
+    var me = objects.get(window.snake.id);
     if (!me)
     {
       return;
     }
+
+    window.snake.wmd = snakes.reduce((out, other)=>
+    {
+      if(other == me || out)
+        return out;
+
+      if(me.head.dup().mad(other.head, -1).length() < 150 && other.racing)
+        return true;
+
+      return false;
+    }, false);
     
     __state.probe.center.set(me.head);
     __state.probe.angle = me.angle;
@@ -634,5 +669,5 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       ym = best[0].offset.y;
     }
     */
-  }, 100);
+  }, 25);
 })();
