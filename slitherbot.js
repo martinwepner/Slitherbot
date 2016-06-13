@@ -501,7 +501,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       var head = this.head.dup();
       var heading = this.heading.dup();
       var right = heading.dup().right();
-      var front = head.dup().mad(heading.dup(), 200);
+      var front = head.dup().mad(heading.dup(), 80 + this.speed);
 
       box.addPoint(head.dup().mad(right, 80));
       box.addPoint(head.dup().mad(right, -80));
@@ -585,6 +585,17 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     {
       return;
     }
+
+    snakes.reduce((out, other)=>
+    {
+      if(other == snake)
+        return out;
+
+      if(me.head.dup().mad(other.head, -1).length() < 80 && other)
+
+
+    }, false);
+    var distToOtherHead = me.head.dup().mad()
     
     __state.probe.center.set(me.head);
     __state.probe.angle = me.angle;
