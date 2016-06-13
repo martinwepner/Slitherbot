@@ -456,7 +456,12 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     {
       this.id = snake.id;
       this.head = new v2(snake.xx, snake.yy);
-      this.tail = snake.pts.map((point, i, a)=>
+      this.tail = snake.pts
+      .filter((point)=>
+      {
+        return !point.dying;
+      })
+      .map((point, i, a)=>
       {
         var out = new v2(point.xx, point.yy);
         
@@ -540,20 +545,27 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   };
   window.__state = __state;
   
+  var show_probe = false;
+  var show_bounds = true;
   
-  //Draw boxes
   hj_objects.length = 0;
-  hj_objects.push(__state.probe);
-  hj_objects.push({
-    draw: function(g)
-    {
-      g.strokeStyle="#f0f";
-      __state.snakes.forEach((snake) =>
+  if (show_probe)
+  {
+    hj_objects.push(__state.probe);
+  }
+  if (show_bounds)
+  {
+    hj_objects.push({
+      draw: function(g)
       {
-        snake.bounds.draw(g);
-      });
-    },
-  });
+        g.strokeStyle="#f0f";
+        __state.snakes.forEach((snake) =>
+        {
+          snake.bounds.draw(g);
+        });
+      },
+    });
+  }
   
   window.xxx_iv_=setInterval(function()
   {
