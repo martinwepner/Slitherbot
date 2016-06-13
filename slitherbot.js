@@ -174,8 +174,8 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       {
         var layer = [];
         
-        var lradius = radius * (i+1);
-        var density = Math.ceil((i+1+startDensity) * placingDensity);
+        var lradius = radius * (i+1-0.6);
+        var density = Math.ceil((i+1-0.6+startDensity) * placingDensity);
         
         var angle = 2*Math.PI / density;
         var offset = 0;//(i%2) ? angle/2 : 0;
@@ -238,6 +238,11 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
             {
               point.parent = point;
             }
+            var back = Math.abs(j - layer.length/2);
+            if (back > 2 && back < 3)
+            {
+              point.parent = point;
+            }
           }
         });
       });
@@ -248,7 +253,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       var offset = point.dup().mad(this.center, -1);
       var distance = offset.length();
       
-      var layerid = Math.floor(distance / this.radius - 0.5);
+      var layerid = Math.floor(distance / this.radius - 0.5 + 0.6);
       var layer = this.layers[layerid];
       
       if (layer)
@@ -504,7 +509,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   var __state =
   {
     //probe: new Probe(7, 50, 4, 6),
-    probe: new Probe(11, 65, 6, 8),
+    probe: new Probe(12, 58, 6, 8),
     snakes: [],
     pos: new v2(),
     speed: 0,
