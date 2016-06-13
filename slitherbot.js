@@ -507,7 +507,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       var head = this.head.dup();
       var heading = this.heading.dup();
       var right = heading.dup().right();
-      var front = head.dup().mad(heading.dup(), 80 + this.speed);
+      var front = head.dup().mad(heading.dup(), 200 + (this.racing ? 50 : 0));
 
       box.addPoint(head.dup().mad(right, 80));
       box.addPoint(head.dup().mad(right, -80));
@@ -533,14 +533,16 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   var __state =
   {
     //probe: new Probe(7, 50, 4, 6),
-    probe: new Probe(12, 58, 6, 8),
+    probe: new Probe(15, 58, 6, 8),
     snakes: [],
     pos: new v2(),
     speed: 0,
   };
   window.__state = __state;
   
-  /*hj_objects.length = 0;
+  
+  //Draw boxes
+  hj_objects.length = 0;
   hj_objects.push(__state.probe);
   hj_objects.push({
     draw: function(g)
@@ -551,7 +553,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         snake.bounds.draw(g);
       });
     },
-  });*/
+  });
   
   window.xxx_iv_=setInterval(function()
   {
@@ -597,7 +599,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       if(other == me || out)
         return out;
 
-      if(me.head.dup().mad(other.head, -1).length() < 150 && other.racing)
+      if(me.head.dup().mad(other.head, -1).length() < 200 && other.racing)
         return true;
 
       return false;
@@ -669,5 +671,5 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       ym = best[0].offset.y;
     }
     */
-  }, 25);
+  }, 10);
 })();
