@@ -545,7 +545,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   };
   window.__state = __state;
   
-  var show_probe = false;
+  var show_probe = true;
   var show_bounds = true;
   
   hj_objects.length = 0;
@@ -656,32 +656,5 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       __state.speed = __state.speed * 0.95 + delta.length() * 0.05 / 0.1;
     }
     __state.pos = me.head;
-    
-    /*
-    var best = foods
-    .filter((food)=>
-    {
-      var offset = food.dup().mad(me.head, -1);
-      var distance = offset.length();
-      
-      var front = offset.dot(me.heading);
-      var right = offset.cross(me.heading);
-      
-      var angle = Math.abs(Math.atan2(right, front));
-      
-      food.offset = offset;
-      food.angle = angle;
-      food.distance = distance;
-      
-      return distance < 300 && angle < Math.PI / 3;
-    })
-    .sort((a, b)=>((b.size-a.size) || (a.angle-b.angle)));
-    
-    if (best.length > 0)
-    {
-      xm = best[0].offset.x;
-      ym = best[0].offset.y;
-    }
-    */
   }, 10);
 })();
