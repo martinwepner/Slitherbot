@@ -76,6 +76,16 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       this.y = Math.max(this.y, v.y);
       return this;
     }
+
+    right(v)
+    {
+      var x = this.x;
+      var y = this.y;
+
+      this.x = y;
+      this.y = -x;
+      return this;
+    }
     
     *iter()
     {
@@ -484,6 +494,19 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         box.addPoint(point.mad(region, -1));
         box.addPoint(point.mad(region, 2));
       });
+
+      var box = new BoundingBox();
+      parts.push(box);
+
+      var head = this.head.dup();
+      var heading = this.heading.dup();
+      var right = heading.dup().right();
+      var front = head.dup().mad(heading.dup(), 200);
+
+      box.addPoint(head.dup().mad(right, 80));
+      box.addPoint(head.dup().mad(right, -80));
+      box.addPoint(front.dup().mad(right, 80));
+      box.addPoint(front.dup().mad(right, -80));
       
       while (parts.length > 1)
       {
@@ -511,7 +534,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   };
   window.__state = __state;
   
-  hj_objects.length = 0;
+  /*hj_objects.length = 0;
   hj_objects.push(__state.probe);
   hj_objects.push({
     draw: function(g)
@@ -522,7 +545,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         snake.bounds.draw(g);
       });
     },
-  });
+  });*/
   
   window.xxx_iv_=setInterval(function()
   {
