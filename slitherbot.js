@@ -119,6 +119,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     {
       this.weight = 0;
       this.blocked = false;
+      this.needsRacing = false;
       
       this.sum = 0;
       this.parent = null;
@@ -128,6 +129,12 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     addFood(food)
     {
       this.weight += food.size - 2;
+    }
+
+    addPrey(prey)
+    {
+      this.weight += prey.size * 40;
+      this.needsRacing = true;
     }
     
     trace()
@@ -166,6 +173,10 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         {
           this.parent.sum = this.sum;
           this.parent.bestNode = this.bestNode || this;
+          if (this.needsRacing)
+          {
+            this.parent.needsRacing = this.needsRacing;
+          }
         }
       }
     }
@@ -293,6 +304,19 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         var point = layer[pointid];
         
         point.addFood(food);
+      }
+    }
+    
+    addPrey(food)
+    {
+      var [layerid, pointid] = this.getNearestPoint(food);
+      
+      var layer = this.layers[layerid];
+      if (layer)
+      {
+        var point = layer[pointid];
+        
+        point.addPrey(food);
       }
     }
     
@@ -529,7 +553,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       var head = this.head.dup();
       var heading = this.heading.dup();
       var right = heading.dup().right();
-      var front = head.dup().mad(heading.dup(), 200 + (this.racing ? 100 : 0));
+      var front = head.dup().mad(heading.dup(), 200 + (this.racing ? 100 : 0) + window.snake.tl / 2.0);
 
       box.addPoint(head.dup().mad(right, 80));
       box.addPoint(head.dup().mad(right, -80));
@@ -560,8 +584,10 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     pos: new v2(),
     speed: 0,
     racing: false,
+    probeRacing: true,
+    doRacing: false,
     show_only_best_probe: true,
-    show_bounds: false,
+    show_bounds: true,
   };
   window.__state = __state;
   
@@ -586,7 +612,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   
   window.xxx_iv_=setInterval(function()
   {
-    if (!snake) return;
+    if (!window.snake) return;
 
     var objects = new Map();
     
@@ -614,6 +640,25 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       
       return out;
     });
+
+    var preys = window.preys
+    .filter((food)=>food)
+    .map((food)=>
+    {
+      var out = new v2(food.xx, food.yy);
+      
+      out.id = food.id;
+      out.size = food.sz;
+      
+      objects.set(out.id, out);
+      
+      return out;
+    });
+
+    if (snake.tl < 9)
+    {
+      preys.length = 0;
+    }
     
     __state.snakes = snakes;
     
@@ -622,9 +667,13 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     {
       return;
     }
+
+    var lastDoRacing = __state.doRacing;
+    __state.doRacing = false;
+
     if(__state.racing)
     {
-      window.snake.wmd = snakes.reduce((out, other)=>
+      var nearbyRacingSnake = snakes.reduce((out, other) =>
       {
         if(other == me || out)
           return out;
@@ -634,8 +683,15 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
 
         return false;
       }, false);
+
+      if (nearbyRacingSnake)
+      {
+        __state.doRacing = true;
+      }
     }
-    
+
+    __state.preys = preys;
+
     __state.probe.center.set(me.head);
     __state.probe.angle = me.angle;
     __state.probe.heading = me.heading;
@@ -658,15 +714,37 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     {
       __state.probe.addFood(food);
     });
+    preys.forEach((prey) =>
+    {
+      __state.probe.addPrey(prey);
+    });
     __state.probe.trace();
     var best = __state.probe.traceBack();
 
+    if (__state.probeRacing)
+    {
+      if (__state.probe.bestNode && __state.probe.bestNode.needsRacing)
+      {
+        __state.doRacing = true;
+      }
+    }
+    
     if (best[0])
     {
       var offset = best[0].mad(me.head, -1).mul(10);
       
       xm = offset.x;
       ym = offset.y;
+    }
+
+    var longEnough = true; // TODO: minimum snake length
+    if (!longEnough)
+    {
+      __state.doRacing = false;
+    }
+    if (lastDoRacing != __state.doRacing)
+    {
+      snake.wmd = __state.doRacing;
     }
     
     var delta = me.head.dup().mad(__state.pos, -1);
