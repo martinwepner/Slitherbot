@@ -362,36 +362,40 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       g.stroke();
 
       var best = this.bestNode || 1;
-      
+
+
       this.layers.forEach((layer) =>
       {
         layer.forEach((point) =>
         {
-
-          g.strokeStyle = point.blocked ? "red" : (point.bestNode == best ? "orange" : "green");
-          
-          var size = 1 + point.weight;
-          g.strokeRect(point.position.x-size, point.position.y-size, size*2+1, size*2+1);
-          
-          //g.beginPath();
-          //point.parents.forEach((parent)=>
-          //{
-          //  g.moveTo(parent.position.x, parent.position.y);
-          //  g.lineTo(point.position.x, point.position.y);
-          //});
-          //g.stroke();
-          
-          if (point.parent)
+          if(point.bestNode == best || !window.__state.show_only_best_probe)
           {
-            g.beginPath();
-            g.moveTo(point.parent.position.x, point.parent.position.y);
-            g.lineTo(point.position.x, point.position.y);
-            g.stroke();
+
+            g.strokeStyle = point.blocked      ? "red" : (point.bestNode == best ? "white" : "green");
             
-            if (point.sum > point.weight)
+            var size = 1 + point.weight;
+            g.strokeRect(point.position.x-size, point.position.y-size, size*2+1, size*2+1);
+            
+            //g.beginPath();
+            //point.parents.forEach((parent)=>
+            //{
+            //  g.moveTo(parent.position.x, parent.position.y);
+            //  g.lineTo(point.position.x, point.position.y);
+            //});
+            //g.stroke();
+            
+            if (point.parent)
             {
-              var size = 1 + point.sum;
-              g.strokeRect(point.position.x-size, point.position.y-size, size*2+1, size*2+1);
+              g.beginPath();
+              g.moveTo(point.parent.position.x, point.parent.position.y);
+              g.lineTo(point.position.x, point.position.y);
+              g.stroke();
+              
+              if (point.sum > point.weight)
+              {
+                var size = 1 + point.sum;
+                g.strokeRect(point.position.x-size, point.position.y-size, size*2+1, size*2+1);
+              }
             }
           }
         });
@@ -551,23 +555,22 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   var __state =
   {
     //probe: new Probe(7, 50, 4, 6),
-    probe: new Probe(15, 58, 6, 8),
+    probe: new Probe(17, 58, 6, 8),
     snakes: [],
     pos: new v2(),
     speed: 0,
     racing: false,
+    show_only_best_probe: true,
+    show_bounds: false,
   };
   window.__state = __state;
   
-  var show_probe = true;
-  var show_bounds = true;
-  
   hj_objects.length = 0;
-  if (show_probe)
+  if (true)//__state.show_only_best_probe)
   {
     hj_objects.push(__state.probe);
   }
-  if (show_bounds)
+  if (__state.show_bounds)
   {
     hj_objects.push({
       draw: function(g)
