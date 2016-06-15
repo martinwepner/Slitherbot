@@ -496,6 +496,68 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     }
   }
   
+  class BoundingSphere
+  {
+    constructor(center, radius)
+    {
+      this.center = center;
+      this.radius = radius;
+      this.children = [];
+    }
+
+    mergeSpheres(sphere1, sphere2)
+    {
+      var dir = sphere1.center.dup().mad(sphere2.center, -1);
+      var dirLen = dir.length();
+      this.radius = (dirLen + sphere1.radius + sphere2.radius) / 2;
+      this.center = sphere2.center.dup().mad(dir, (this.radius - sphere2.radius) / dirLen);//sphere2.center.dup().mad(sphere1.center, 1).mul(0.5); //sphere2.center.dup().mad(dir, 0.5);
+
+      this.children.push(sphere1);
+      this.children.push(sphere2);
+    }
+    
+    contains(point)
+    {
+      var dist = point.dup().mad(this.center, -1).length();
+      if (dist < this.radius)
+      {
+        if (!this.children.length)
+        {
+          return true;
+        }
+        else
+        {
+          for (var child of this.children)
+          {
+            if (child.contains(point))
+            {
+              return true;
+            }
+          }
+        }
+      }
+      
+      return false;
+    }
+    
+    get size()
+    {
+      return this.max.dup().mad(this.min, -1).max(v2.zero);
+    }
+    
+    draw(g)
+    {
+      g.beginPath();
+      g.arc(this.center.x, this.center.y, this.radius, 0, Math.PI * 2, false);
+      g.stroke();
+      
+      this.children.forEach((child) =>
+      {
+        child.draw(g);
+      });
+    }
+  }
+  
   class Snake
   {
     constructor(snake)
@@ -527,11 +589,20 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       );
       
       this.racing = snake.tsp > snake.fsp;
-      this.bounds = new BoundingBox();
-      this.createBounds();
+
+      if(__state.use_boxes)
+      {
+        this.bounds = new BoundingBox();
+        this.createBoundsBox();
+      }
+      else
+      {
+        this.bounds = new BoundingSphere(v2.zero, Infinity);
+        this.createBoundsSphere();
+      }
     }
     
-    createBounds()
+    createBoundsBox()
     {
       var parts = [];
       
@@ -587,7 +658,46 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         this.bounds = parts[0];
       }
     }
+
+    createBoundsSphere()
+    {
+      var parts = [];
+      
+      this.tail.forEach((point, i) =>
+      {
+        if(i % 4 == 0)
+          {
+            var sphere = new BoundingSphere(point, 40);
+            parts.push(sphere);
+          }
+      });
+
+      var head = this.head;
+      var heading = this.heading;
+      var maxFront = 200 + (this.racing ? 100 : 0) + window.snake.tl / 1.5;
+
+      for(var i = 0; i < 5; i++)
+      {
+        var front = head.dup().mad(heading, maxFront / 5 * i);
+        var sphere = new BoundingSphere(front, 30);
+        parts.push(sphere);
+      }
+      
+      while (parts.length > 1)
+      {
+        var sphere = new BoundingSphere();
+        sphere.mergeSpheres(parts.shift(), parts.shift());
+        parts.push(sphere);
+      }
+      
+      if (parts[0])
+      {
+        this.bounds = parts[0];
+      }
+    }
   }
+    
+    
   
   var __state =
   {
@@ -601,6 +711,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     doRacing: false,
     show_only_best_probe: true,
     show_bounds: true,
+    use_boxes: false,
   };
   window.__state = __state;
   
