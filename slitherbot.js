@@ -510,7 +510,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       var dir = sphere1.center.dup().mad(sphere2.center, -1);
       var dirLen = dir.length();
       this.radius = (dirLen + sphere1.radius + sphere2.radius) / 2;
-      this.center = sphere2.center.dup().mad(dir, (this.radius - sphere2.radius) / dirLen);//sphere2.center.dup().mad(sphere1.center, 1).mul(0.5); //sphere2.center.dup().mad(dir, 0.5);
+      this.center = sphere2.center.dup().mad(dir, (this.radius - sphere2.radius) / dirLen);
 
       this.children.push(sphere1);
       this.children.push(sphere2);
@@ -591,7 +591,6 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         
         return out;
       });
-<<<<<<< HEAD
       
       this.speed = snake.sp * 32;
       this.angle = snake.ang;
@@ -612,10 +611,6 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         this.bounds = new BoundingSphere(v2.zero, Infinity);
         this.createBoundsSphere();
       }
-=======
-      this.bounds = new BoundingBox();
-      this.createBounds();
->>>>>>> fcb4989c817b173003e2738971fd861e1586e1d7
     }
     
     createBoundsBox()
@@ -675,16 +670,18 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       }
     }
 
-<<<<<<< HEAD
     createBoundsSphere()
     {
       var parts = [];
+
+      var sphere = new BoundingSphere(this.head.dup(), 60);
+      parts.push(sphere);
       
       this.tail.forEach((point, i) =>
       {
         if(i % 4 == 0)
           {
-            var sphere = new BoundingSphere(point, 40);
+            var sphere = new BoundingSphere(point.dup(), 60);
             parts.push(sphere);
           }
       });
@@ -696,7 +693,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       for(var i = 0; i < 5; i++)
       {
         var front = head.dup().mad(heading, maxFront / 5 * i);
-        var sphere = new BoundingSphere(front, 30);
+        var sphere = new BoundingSphere(front, maxFront / 10);
         parts.push(sphere);
       }
       
@@ -711,12 +708,13 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       {
         this.bounds = parts[0];
       }
-=======
+    }
+
     draw(g)
     {
       g.beginPath();
       g.arc(this.head.x, this.head.y, this.size, 0, Math.PI * 2, false);
->>>>>>> fcb4989c817b173003e2738971fd861e1586e1d7
+      g.stroke();
     }
   }
     
@@ -734,7 +732,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     doRacing: false,
     show_only_best_probe: true,
     show_bounds: true,
-    use_boxes: false,
+    use_boxes: true,
   };
   window.__state = __state;
   
