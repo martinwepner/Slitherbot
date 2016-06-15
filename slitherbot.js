@@ -400,7 +400,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
           if(point.bestNode == best || !window.__state.show_only_best_probe)
           {
 
-            g.strokeStyle = point.blocked      ? "red" : (point.bestNode == best ? "white" : "green");
+            g.strokeStyle = point.blocked ? "red" : (point.bestNode == best ? "white" : "green");
             
             var size = 1 + point.weight;
             g.strokeRect(point.position.x-size, point.position.y-size, size*2+1, size*2+1);
@@ -501,6 +501,17 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
     constructor(snake)
     {
       this.id = snake.id;
+      this.size = snake.tl;
+
+      this.speed = snake.sp * 32;
+      this.racing = snake.tsp > snake.fsp;
+
+      this.angle = snake.ang;
+      this.heading = new v2(
+        Math.cos(this.angle),
+        Math.sin(this.angle)
+      );
+
       this.head = new v2(snake.xx, snake.yy);
       this.tail = snake.pts
       .filter((point)=>
@@ -518,15 +529,6 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         
         return out;
       });
-      
-      this.speed = snake.sp * 32;
-      this.angle = snake.ang;
-      this.heading = new v2(
-        Math.cos(this.angle),
-        Math.sin(this.angle)
-      );
-      
-      this.racing = snake.tsp > snake.fsp;
       this.bounds = new BoundingBox();
       this.createBounds();
     }
@@ -587,6 +589,12 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         this.bounds = parts[0];
       }
     }
+
+    draw(g)
+    {
+      g.beginPath();
+      g.arc(this.head.x, this.head.y, this.size, 0, Math.PI * 2, false);
+    }
   }
   
   var __state =
@@ -605,10 +613,8 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   window.__state = __state;
   
   hj_objects.length = 0;
-  if (true)//__state.show_only_best_probe)
-  {
-    hj_objects.push(__state.probe);
-  }
+  hj_objects.push(__state.probe);
+
   if (__state.show_bounds)
   {
     hj_objects.push(
@@ -619,6 +625,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         __state.snakes.forEach((snake) =>
         {
           snake.bounds.draw(g);
+          snake.draw(g);
         });
       },
     });
@@ -669,7 +676,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       return out;
     });
 
-    if (snake.tl < 9)
+    if (window.snake.tl < 9)
     {
       preys.length = 0;
     }
@@ -682,12 +689,17 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
       return;
     }
 
+
     __state.preys = preys;
 
+    var newProbe = new Probe(16, Math.max(50, window.snake.tl), 6, 8);
+    hj_objects[hj_objects.indexOf(__state.probe)] = newProbe;
+    __state.probe = newProbe;
     __state.probe.center.set(me.head);
     __state.probe.angle = me.angle;
     __state.probe.heading = me.heading;
     
+
     __state.probe.reset();
     for (var point of __state.probe.iter())
     {
