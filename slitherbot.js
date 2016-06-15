@@ -133,7 +133,7 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
 
     addPrey(prey)
     {
-      this.weight += prey.size * 40;
+      this.weight += prey.size * 10;
       this.needsRacing = true;
     }
     
@@ -547,18 +547,26 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
         box.addPoint(point.mad(region, 2));
       });
 
-      var box = new BoundingBox();
-      parts.push(box);
-
       var head = this.head.dup();
       var heading = this.heading.dup();
       var right = heading.dup().right();
-      var front = head.dup().mad(heading.dup(), 200 + (this.racing ? 100 : 0) + window.snake.tl / 2.0);
+      //var front = head.dup().mad(heading.dup(), 200 + (this.racing ? 100 : 0) + window.snake.tl / 1.5);
+      var maxFront = 300 + (this.racing ? 100 : 0) + window.snake.tl / 1.5;
+      var oldHead = head.dup();
 
-      box.addPoint(head.dup().mad(right, 80));
-      box.addPoint(head.dup().mad(right, -80));
-      box.addPoint(front.dup().mad(right, 80));
-      box.addPoint(front.dup().mad(right, -80));
+      for(var i = 1; i <= 5; i++)
+      {
+
+        var box = new BoundingBox();
+        parts.push(box);
+        var front = head.dup().mad(heading, maxFront / 5 * i);
+
+        box.addPoint(oldHead.dup().mad(right, 40));
+        box.addPoint(oldHead.dup().mad(right, -40));
+        box.addPoint(front.dup().mad(right, 40));
+        box.addPoint(front.dup().mad(right, -40));
+        oldHead = front.dup();
+      }
       
       while (parts.length > 1)
       {
@@ -598,7 +606,8 @@ if (window.xxx_iv_)clearInterval(window.xxx_iv_);
   }
   if (__state.show_bounds)
   {
-    hj_objects.push({
+    hj_objects.push(
+    {
       draw: function(g)
       {
         g.strokeStyle="#f0f";
